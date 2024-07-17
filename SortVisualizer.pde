@@ -1,10 +1,6 @@
-final int arrSize = 40; // length of array
-final int fps = 60; // passed to frameRate()
-
-int[] array; // array of len integers, 1 -> len
-float segWidth; // width / array.length
-
-enum SortType {BUBBLE} // desired sorting algorithm
+/*
+    SortVisualizer.pde: simulates and displays swaps and comparisons for a given sorting algorithm.
+*/
 
 class Pair { // represents a record of a swap/comparison
   int id;
@@ -21,8 +17,24 @@ class Pair { // represents a record of a swap/comparison
   }
 }
 
+enum SortType {BUBBLE} // desired sorting algorithm
+
+final int fps = 60; // passed to frameRate()
+final String fontStr = "Consolas"; // contained in PFont.list()
+
+final SortType sortingAlg = SortType.BUBBLE; // selected sorting method
+final int arrSize = 40; // length of array
+
+int[] array; // array of len integers, 1 -> len
+float segWidth; // width / array.length
+
 ArrayList<Pair> swaps; // arraylist of swaps made during the sort
 ArrayList<Pair> comps; // arraylist of array element comparisons made
+
+int currFrame; // should be synced with "comps" ArrayList
+int swapsIndex; // current index into "swaps" ArrayList
+
+boolean paused;
 
 // allocate, fill and shuffle array using Processing's IntList
 void initArray(){
@@ -106,21 +118,26 @@ void simulateSort(int [] arr, SortType t){
   }
 }
 
-int currFrame; // should be synced with "comps" ArrayList
-int swapsIndex; // current index into "swaps" ArrayList
-
 void displayStats() {
   // display stats
   fill(#ffffff);
+  textSize(24);
+  text("sort: " + sortingAlg, 8, 24);
+  text("size: " + arrSize, 8, 48);
+  text("comparisons: " + (currFrame+1), 8, 72);
+  text("swaps: " + (swapsIndex), 8, 96);
+}
+
+void displayPause(){
+  fill(#9f9f9f);
   textSize(30);
-  text("comparisons: " + (currFrame+1), 10, 30);
-  text("swaps: " + (swapsIndex), 10, 70);
+  text("PAUSED (press space)", 10, 150);
 }
 
 // generic indexOf() for arrays
-int findString(String[] strings){
+int findString(String[] strings, String str){
   for(int i = 0; i < strings.length; i++){
-    if(strings[i].equals("Consolas")) return i;
+    if(strings[i].equals(str)) return i;
   }
   return -1;
 }
@@ -130,9 +147,9 @@ void setup(){
   frameRate(fps);
   rectMode(CORNER);
   stroke(#000000);
-  // try to load consolas font
-  if(findString(PFont.list()) != -1){
-    textFont(createFont("Consolas", 32));
+  // try to load font
+  if(findString(PFont.list(), fontStr) != -1){
+    textFont(createFont(fontStr, 32));
   }
   
   segWidth = width / (float)arrSize; // segment width
@@ -140,7 +157,7 @@ void setup(){
   comps = new ArrayList<Pair>();
   
   initArray();
-  simulateSort(array.clone(), SortType.BUBBLE);
+  simulateSort(array.clone(), sortingAlg);
   
   currFrame = -1;
   swapsIndex = 0;
@@ -149,6 +166,7 @@ void setup(){
   drawArray();
   
   displayStats();
+  
   currFrame++;
 }
 
@@ -187,10 +205,8 @@ void draw(){
   currFrame++; 
 }
 
-boolean paused;
-
 void keyPressed(){
-  if(key == ' '){
+  if(key == ' '){ // pause/unpause on space pressed
     if(paused){
       loop();
     } else {
