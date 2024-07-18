@@ -17,7 +17,12 @@ class Pair { // represents a record of a swap/comparison
   }
 }
 
-enum SortType {BUBBLE} // desired sorting algorithm
+// desired sorting algorithm
+enum SortType {
+  BUBBLE,    // bubble sort
+  SELECTION, // selection sort
+  INSERTION  // insertion sort
+}
 
 final int fps = 60; // passed to frameRate()
 final String fontStr = "Consolas"; // contained in PFont.list()
@@ -50,11 +55,11 @@ void initArray(){
   }
 }
 
-// swaps elements at a pair of indices
-void swapInArray(Pair p){
-  int temp = array[p.a];
-  array[p.a] = array[p.b];
-  array[p.b] = temp;
+// swaps elements at i/j
+void swapInArray(int i, int j, int[] arr){
+  int temp = arr[i];
+  arr[i] = arr[j];
+  arr[j] = temp;
 }
 
 void drawArray(){
@@ -94,26 +99,63 @@ void drawPair(Pair p){
 // fill ArrayList of swaps
 void bubbleSort(int[] arr) {
   int frame = 0; // iteration counter
-  int temp;
-  int n = arr.length;
-  for(int i = 0; i < n; i++){
-    for(int j = 0; j < n-i-1; j++){
-      if(arr[j] > arr[j+1]){
-        temp = arr[j];
-        arr[j] = arr[j+1];
-        arr[j+1] = temp;
-        swaps.add(new Pair(frame, j, j+1));
-      }
+  boolean swapped;
+  for(int i = 0; i < arr.length; i++){
+    swapped = false;
+    for(int j = 0; j < arr.length-i-1; j++){
       comps.add(new Pair(frame, j, j+1));
+      if(arr[j] > arr[j+1]){
+        swaps.add(new Pair(frame, j, j+1));
+        swapInArray(j, j+1, arr);
+        swapped = true;
+      }
       frame++;
+    }
+    if(!swapped) return;
+  }
+}
+
+void selectionSort(int[] arr){
+  int frame = 0;
+  int mindex; // index of minimum
+  for(int i = 0; i < arr.length; i++){
+    mindex = i;
+    for(int j = i+1; j < arr.length; j++){
+       comps.add(new Pair(frame, j, mindex));
+       if(arr[j] < arr[mindex]){
+         mindex = j;
+       }
+       frame++;
+    }
+    swaps.add(new Pair(frame-1, i, mindex));
+    swapInArray(mindex, i, arr);
+  }
+}
+
+void insertionSort(int[] arr){
+  int frame = 0;
+  for(int i = 1; i < arr.length; i++){
+    for(int j = i; j > 0; j--){
+      comps.add(new Pair(frame, j-1, j));
+      frame++;
+      if(arr[j-1] <= arr[j]) break;
+      swaps.add(new Pair(frame-1, j-1, j));
+      swapInArray(j-1, j, arr); 
     }
   }
 }
+
 // fill ArrayList of swaps and comps, running through desired sorting alg.
 void simulateSort(int [] arr, SortType t){
   switch(t){
     case BUBBLE:
       bubbleSort(arr);
+      break;
+    case SELECTION:
+      selectionSort(arr);
+      break;
+    case INSERTION:
+      insertionSort(arr);
       break;
   }
 }
@@ -146,7 +188,9 @@ void setup(){
   size(800, 600);
   frameRate(fps);
   rectMode(CORNER);
+  background(#000000);
   stroke(#000000);
+  
   // try to load font
   if(findString(PFont.list(), fontStr) != -1){
     textFont(createFont(fontStr, 32));
@@ -162,7 +206,6 @@ void setup(){
   currFrame = -1;
   swapsIndex = 0;
   
-  background(#000000);
   drawArray();
   
   displayStats();
@@ -198,7 +241,7 @@ void draw(){
   if(swapsIndex < swaps.size()){
     Pair currSwap = swaps.get(swapsIndex);
     if(currSwap.id == currFrame){
-      swapInArray(currSwap);
+      swapInArray(currSwap.a, currSwap.b, array);
       swapsIndex++;
     }
   }
