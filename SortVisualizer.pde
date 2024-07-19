@@ -21,14 +21,15 @@ class Pair { // represents a record of a swap/comparison
 enum SortType {
   BUBBLE,    // bubble sort
   SELECTION, // selection sort
-  INSERTION  // insertion sort
+  INSERTION, // insertion sort
+  QUICK      // quicksort
 }
 
-final int fps = 60; // passed to frameRate()
+final int fps = 120; // passed to frameRate()
 final String fontStr = "Consolas"; // contained in PFont.list()
 
-final SortType sortingAlg = SortType.BUBBLE; // selected sorting method
-final int arrSize = 40; // length of array
+final SortType sortingAlg = SortType.QUICK; // selected sorting method
+final int arrSize = 256; // length of array
 
 int[] array; // array of len integers, 1 -> len
 float segWidth; // width / array.length
@@ -36,7 +37,7 @@ float segWidth; // width / array.length
 ArrayList<Pair> swaps; // arraylist of swaps made during the sort
 ArrayList<Pair> comps; // arraylist of array element comparisons made
 
-int currFrame; // should be synced with "comps" ArrayList
+int currFrame; // consistent with "comps" ArrayList
 int swapsIndex; // current index into "swaps" ArrayList
 
 boolean paused;
@@ -145,6 +146,39 @@ void insertionSort(int[] arr){
   }
 }
 
+int recur_frame; // need global frame counter due to recursion
+
+int qs_partition(int arr[], int low, int high){
+  int frame = recur_frame;
+  int piv = arr[high]; // use last element as pivot
+  int i = low; // swap elements here if lower than pivot
+  for(int j = low; j < high; j++){
+    comps.add(new Pair(frame, j, high));
+    if(arr[j] <= piv){
+      swaps.add(new Pair(frame, i, j));
+      swapInArray(i, j, arr);
+      i++;
+    }
+    frame++;
+  }
+  swaps.add(new Pair(frame-1, i, high));
+  swapInArray(i, high, arr);
+  recur_frame = frame; // update global frame count
+  return i; // index of pivot
+}
+
+void qs_recur(int arr[], int low, int high){
+  if(low >= high || low < 0) return;
+  int mid = qs_partition(arr, low, high);
+  qs_recur(arr, low, mid-1);
+  qs_recur(arr, mid+1, high);
+}
+
+void quickSort(int arr[]){
+  recur_frame = 0; // initialize global frame count
+  qs_recur(arr, 0, arr.length-1);
+}
+
 // fill ArrayList of swaps and comps, running through desired sorting alg.
 void simulateSort(int [] arr, SortType t){
   switch(t){
@@ -156,6 +190,9 @@ void simulateSort(int [] arr, SortType t){
       break;
     case INSERTION:
       insertionSort(arr);
+      break;
+    case QUICK:
+      quickSort(arr);
       break;
   }
 }
@@ -185,7 +222,7 @@ int findString(String[] strings, String str){
 }
 
 void setup(){
-  size(800, 600);
+  size(1280, 720);
   frameRate(fps);
   rectMode(CORNER);
   background(#000000);
@@ -237,12 +274,14 @@ void draw(){
   // display stats
   displayStats();
   
-  // if a swap occurs on this frame, do it
-  if(swapsIndex < swaps.size()){
+  // if swaps occur on this frame, do them
+  while(swapsIndex < swaps.size()) {
     Pair currSwap = swaps.get(swapsIndex);
     if(currSwap.id == currFrame){
       swapInArray(currSwap.a, currSwap.b, array);
       swapsIndex++;
+    } else {
+      break; 
     }
   }
   currFrame++; 
