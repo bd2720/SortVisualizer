@@ -1,6 +1,17 @@
 /*
-    SortVisualizer.pde: simulates and displays swaps and comparisons for a given sorting algorithm.
+    SortVisualizer.pde: simulates and displays swaps and comparisons
+    for various sorting algorithms.
 */
+
+// desired sorting algorithm
+enum SortType {
+  BUBBLE,    // bubble sort
+  SELECTION, // selection sort
+  INSERTION, // insertion sort
+  QUICK,     // quicksort
+  HEAP,      // heapsort
+  BOGO       // bogosort
+}
 
 class Pair { // represents a record of a swap/comparison
   int id;
@@ -17,15 +28,6 @@ class Pair { // represents a record of a swap/comparison
   }
 }
 
-// desired sorting algorithm
-enum SortType {
-  BUBBLE,    // bubble sort
-  SELECTION, // selection sort
-  INSERTION, // insertion sort
-  QUICK,     // quicksort
-  HEAP       // heapsort
-}
-
 // passed to windowResize() in setup()
 final int screenWidth = 1280;
 final int screenHeight = 720;
@@ -34,7 +36,7 @@ final int fps = 60; // passed to frameRate()
 final String fontStr = "Consolas"; // contained in PFont.list()
 
 final SortType sortingAlg = SortType.QUICK; // selected sorting method
-final int arrSize = 32; // length of array
+final int arrSize = 100; // length of array
 
 int[] array; // array of len integers, 1 -> len
 float segWidth; // width / array.length
@@ -256,6 +258,34 @@ int heapSort(int arr[]){
   return frame;
 }
 
+// for bogosort: return -frameCount if sorted
+int bs_isSorted(int arr[], int frame){
+  for(int i = 1; i < arr.length; i++){
+     if(compInArrayGT(i-1, i, arr, frame)){
+       return ++frame; 
+     }
+     frame++;
+  }
+  return -frame;
+}
+
+// for bogosort: random swaps 0 through arr.length
+int bs_shuffle(int arr[], int frame){
+  for(int i = 0; i < arr.length; i++){
+    swapInArray(i, int(random(0, arr.length)), arr, frame);
+  }
+  return ++frame;
+}
+
+int bogoSort(int arr[]){
+  int frame = 0;
+  // shuffle until sorted
+  while((frame = (bs_isSorted(arr, frame))) >= 0){
+    frame = bs_shuffle(arr, frame);
+  }
+  return -frame; // make frame positive again
+}
+
 // fill ArrayList of swaps and comps, running through desired sorting alg.
 // returns final frame count
 int simulateSort(int [] arr, SortType t){
@@ -270,6 +300,8 @@ int simulateSort(int [] arr, SortType t){
       return quickSort(arr);
     case HEAP:
       return heapSort(arr);
+    case BOGO:
+      return bogoSort(arr);
   }
   return 0;
 }
