@@ -4,7 +4,7 @@ SortVisualizer is a simple visualization tool for sorting algorithms.
 ## About   
 Sorts a shuffled array of integers using a specified sorting algorithm.  
 The x-position of each segment represents an index, and the segment's height is proportional to the array's current value at that index.  
-The comparison made on each frame is highlighted in red.  
+The comparison (if present) made on each frame is highlighted in red.  
 If a comparison on a given frame results in any swaps, they will display on the following frame.  
 Number of swaps and number of comparisons are displayed as the animation plays.  
 Press the spacebar to pause/unpause.  
@@ -20,7 +20,8 @@ Press the spacebar to pause/unpause.
 enum SortType {
   BUBBLE,    // bubble sort
   SELECTION, // selection sort
-  INSERTION  // insertion sort
-  QUICK      // quicksort
+  INSERTION, // insertion sort
+  QUICK,     // quicksort
+  HEAP       // heapsort
 }
 ```
