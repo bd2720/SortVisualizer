@@ -22,14 +22,19 @@ enum SortType {
   BUBBLE,    // bubble sort
   SELECTION, // selection sort
   INSERTION, // insertion sort
-  QUICK      // quicksort
+  QUICK,     // quicksort
+  HEAP       // heapsort
 }
 
-final int fps = 120; // passed to frameRate()
+// passed to windowResize() in setup()
+final int screenWidth = 1280;
+final int screenHeight = 720;
+
+final int fps = 60; // passed to frameRate()
 final String fontStr = "Consolas"; // contained in PFont.list()
 
 final SortType sortingAlg = SortType.QUICK; // selected sorting method
-final int arrSize = 256; // length of array
+final int arrSize = 32; // length of array
 
 int[] array; // array of len integers, 1 -> len
 float segWidth; // width / array.length
@@ -37,7 +42,9 @@ float segWidth; // width / array.length
 ArrayList<Pair> swaps; // arraylist of swaps made during the sort
 ArrayList<Pair> comps; // arraylist of array element comparisons made
 
-int currFrame; // consistent with "comps" ArrayList
+int currFrame; // current frame (0/1 comps and 0/m swaps per frame)
+int endFrame;  // frame AFTER the last operation (comp and/or swap)
+int compsIndex; // current index into "comps" ArrayList
 int swapsIndex; // current index into "swaps" ArrayList
 
 boolean paused;
@@ -56,11 +63,22 @@ void initArray(){
   }
 }
 
-// swaps elements at i/j
-void swapInArray(int i, int j, int[] arr){
+// wrapper for a comparison that stores it in comps
+boolean compInArrayLT(int i, int j, int[] arr, int frame){
+  comps.add(new Pair(frame, i, j));
+  return arr[i] < arr[j];
+}
+boolean compInArrayGT(int i, int j, int[] arr, int frame){
+  comps.add(new Pair(frame, i, j));
+  return arr[i] > arr[j];
+}
+
+// swaps elements at i/j (+ record in swaps)
+void swapInArray(int i, int j, int[] arr, int frame){
   int temp = arr[i];
   arr[i] = arr[j];
   arr[j] = temp;
+  swaps.add(new Pair(frame, i, j));
 }
 
 void drawArray(){
@@ -98,71 +116,65 @@ void drawPair(Pair p){
 }
 
 // fill ArrayList of swaps
-void bubbleSort(int[] arr) {
+int bubbleSort(int[] arr) {
   int frame = 0; // iteration counter
   boolean swapped;
   for(int i = 0; i < arr.length; i++){
     swapped = false;
     for(int j = 0; j < arr.length-i-1; j++){
-      comps.add(new Pair(frame, j, j+1));
-      if(arr[j] > arr[j+1]){
-        swaps.add(new Pair(frame, j, j+1));
-        swapInArray(j, j+1, arr);
+      if(compInArrayGT(j, j+1, arr, frame)){
+        swapInArray(j, j+1, arr, frame);
         swapped = true;
       }
       frame++;
     }
-    if(!swapped) return;
+    if(!swapped) break;
   }
+  return frame;
 }
 
-void selectionSort(int[] arr){
+int selectionSort(int[] arr){
   int frame = 0;
   int mindex; // index of minimum
   for(int i = 0; i < arr.length; i++){
     mindex = i;
     for(int j = i+1; j < arr.length; j++){
-       comps.add(new Pair(frame, j, mindex));
-       if(arr[j] < arr[mindex]){
+       if(compInArrayLT(j, mindex, arr, frame)){
          mindex = j;
        }
        frame++;
     }
-    swaps.add(new Pair(frame-1, i, mindex));
-    swapInArray(mindex, i, arr);
+    swapInArray(mindex, i, arr, frame-1);
   }
+  return frame;
 }
 
-void insertionSort(int[] arr){
+int insertionSort(int[] arr){
   int frame = 0;
   for(int i = 1; i < arr.length; i++){
     for(int j = i; j > 0; j--){
-      comps.add(new Pair(frame, j-1, j));
       frame++;
-      if(arr[j-1] <= arr[j]) break;
-      swaps.add(new Pair(frame-1, j-1, j));
-      swapInArray(j-1, j, arr); 
+      if(compInArrayGT(j, j-1, arr, frame-1)) break;
+      swapInArray(j-1, j, arr, frame-1); 
     }
   }
+  return frame;
 }
 
 int recur_frame; // need global frame counter due to recursion
 
 int qs_partition(int arr[], int low, int high){
   int frame = recur_frame;
-  int piv = arr[high]; // use last element as pivot
+  int pivdex = high; // use last element as pivot
   int i = low; // swap elements here if lower than pivot
   for(int j = low; j < high; j++){
-    comps.add(new Pair(frame, j, high));
-    if(arr[j] <= piv){
-      swaps.add(new Pair(frame, i, j));
-      swapInArray(i, j, arr);
+    if(compInArrayGT(pivdex, j, arr, frame)){
+      swapInArray(i, j, arr, frame);
       i++;
     }
     frame++;
   }
-  swaps.add(new Pair(frame-1, i, high));
-  swapInArray(i, high, arr);
+  swapInArray(i, high, arr, frame-1);
   recur_frame = frame; // update global frame count
   return i; // index of pivot
 }
@@ -174,27 +186,92 @@ void qs_recur(int arr[], int low, int high){
   qs_recur(arr, mid+1, high);
 }
 
-void quickSort(int arr[]){
+int quickSort(int arr[]){
   recur_frame = 0; // initialize global frame count
   qs_recur(arr, 0, arr.length-1);
+  return recur_frame;
+}
+
+// turn array into max heap
+// returns new current frame
+int hp_heapify(int arr[], int frame){
+  for(int i = 1; i < arr.length; i++){
+    int j = i;
+    int p = (j-1)/2; // parent index
+    while(p != j){
+      if(compInArrayLT(p, j, arr, frame)){
+        swapInArray(p, j, arr, frame);
+      } else {
+        frame++;
+        break;
+      }
+      j = p;
+      p = (j-1)/2;
+      frame++;
+    }
+  }
+  return frame;
+}
+
+int hs_siftDown(int arr[], int heapSize, int frame){
+  int i = 0; // starts as root (parent)
+  int cMax; // index of max child
+  while(i < heapSize){
+    int c1 = 2*i + 1; // child node 1
+    if(c1 >= heapSize) break;
+    int c2 = c1 + 1;  // child node 2
+    if(c2 >= heapSize){ // left-child-only case
+      if(compInArrayGT(c1, i, arr, frame)){
+        swapInArray(c1, i, arr, frame); 
+      }
+      frame++;
+      break;
+    }
+    // find max child
+    cMax = compInArrayGT(c2, c1, arr, frame) ? c2 : c1;
+    frame++;
+    // swap with MAX child if it's bigger
+    if(compInArrayGT(cMax, i, arr, frame)){
+      swapInArray(cMax, i, arr, frame);
+      i = cMax;
+      frame++;
+    } else { // no swap (sifted down)
+      frame++;
+      break;
+    }
+  }
+  return frame;
+}
+
+int heapSort(int arr[]){
+  int frame = 0;
+  // heapify array (max heap)
+  frame = hp_heapify(arr, frame);
+  // swap to back and sift down n-1 times
+  for(int i = arr.length-1; i > 0; i--){
+    swapInArray(i, 0, arr, frame);
+    frame++;
+    frame = hs_siftDown(arr, i, frame);
+  }
+  return frame;
 }
 
 // fill ArrayList of swaps and comps, running through desired sorting alg.
-void simulateSort(int [] arr, SortType t){
+// returns final frame count
+int simulateSort(int [] arr, SortType t){
   switch(t){
     case BUBBLE:
-      bubbleSort(arr);
-      break;
+      return bubbleSort(arr);
     case SELECTION:
-      selectionSort(arr);
-      break;
+      return selectionSort(arr);
     case INSERTION:
-      insertionSort(arr);
-      break;
+      return insertionSort(arr);
     case QUICK:
-      quickSort(arr);
-      break;
+      return quickSort(arr);
+    case HEAP:
+      return heapSort(arr);
   }
+  return 0;
 }
 
 void displayStats() {
@@ -222,7 +299,8 @@ int findString(String[] strings, String str){
 }
 
 void setup(){
-  size(1280, 720);
+  size(800, 600);
+  windowResize(screenWidth, screenHeight);
   frameRate(fps);
   rectMode(CORNER);
   background(#000000);
@@ -238,9 +316,10 @@ void setup(){
   comps = new ArrayList<Pair>();
   
   initArray();
-  simulateSort(array.clone(), sortingAlg);
+  endFrame = simulateSort(array.clone(), sortingAlg);
   
   currFrame = -1;
+  compsIndex = 0;
   swapsIndex = 0;
   
   drawArray();
@@ -252,7 +331,7 @@ void setup(){
 
 void draw(){
   // end sketch if no more comparisons (sorted)
-  if(currFrame >= comps.size()){
+  if(currFrame == endFrame){
     noLoop();
     // draw final array
     background(#000000);
@@ -266,10 +345,16 @@ void draw(){
   background(#000000);
   drawArray();
   
-  // draw the current comparison in red
+  // draw the current comparison in red, if there is one
   // don't need to check if inbounds, since noLoop() occurs
-  Pair currComp = comps.get(currFrame);
-  drawPair(currComp);
+  // assuming 0 or 1 comparisons per frame
+  if(compsIndex < comps.size()){
+    Pair currComp = comps.get(compsIndex);
+    if(currComp.id == currFrame){
+      drawPair(currComp);
+      compsIndex++;
+    }
+  }
   
   // display stats
   displayStats();
@@ -278,7 +363,9 @@ void draw(){
   while(swapsIndex < swaps.size()) {
     Pair currSwap = swaps.get(swapsIndex);
     if(currSwap.id == currFrame){
-      swapInArray(currSwap.a, currSwap.b, array);
+      int temp = array[currSwap.a];
+      array[currSwap.a] = array[currSwap.b];
+      array[currSwap.b] = temp;
       swapsIndex++;
     } else {
       break; 
