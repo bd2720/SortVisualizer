@@ -22,6 +22,7 @@ enum SortType {
   SELECTION, // selection sort
   INSERTION, // insertion sort
   QUICK,     // quicksort
-  HEAP       // heapsort
+  HEAP,      // heapsort
+  BOGO,      // bogosort
 }
 ```
