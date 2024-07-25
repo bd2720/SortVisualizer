@@ -23,6 +23,6 @@ enum SortType {
   INSERTION, // insertion sort
   QUICK,     // quicksort
   HEAP,      // heapsort
-  BOGO,      // bogosort
+  BOGO       // bogosort
 }
 ```
